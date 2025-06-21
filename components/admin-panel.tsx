@@ -76,43 +76,34 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
 
     // Get members
     const fetchMembers = async () => {
-      if (!user.householdId) {
-        console.log("No household ID found for user")
+      if (!user?.householdId) {
         return
       }
 
-      console.log("Fetching members for household:", user.householdId)
-      const householdRef = doc(db, "households", user.householdId)
-      const householdDoc = await getDoc(householdRef)
-      console.log("Household document exists:", householdDoc.exists())
-      
-      if (householdDoc.exists()) {
-        const householdData = householdDoc.data()
-        console.log("Household data:", householdData)
-        const memberIds = householdData.members || []
-        console.log("Member IDs:", memberIds)
+      try {
+        const householdRef = doc(db, "households", user.householdId)
+        const householdDoc = await getDoc(householdRef)
         
-        const memberDetails = await Promise.all(
-          memberIds.map(async (memberId: string) => {
-            console.log("Fetching details for member:", memberId)
-            const userDoc = await getDoc(doc(db, "users", memberId))
-            const userData = userDoc.data()
-            console.log("User data for", memberId, ":", userData)
-            return {
-              id: memberId,
-              name: userData?.name || "Unknown User",
-              email: userData?.email || "",
-              isActive: userData?.isActive !== false, // Default to true if not set
-              isAdmin: userData?.isAdmin || false,
-              photoURL: userData?.photoURL,
-              displayName: userData?.displayName
-            }
-          })
-        )
-        console.log("Processed member details:", memberDetails)
-        setMembers(memberDetails)
-      } else {
-        console.log("No household found with ID:", user.householdId)
+        if (householdDoc.exists()) {
+          const householdData = householdDoc.data()
+          const memberIds = householdData.members || []
+          
+          const memberDetails = await Promise.all(
+            memberIds.map(async (memberId: string) => {
+              const userDoc = await getDoc(doc(db, "users", memberId))
+              const userData = userDoc.data()
+              return {
+                id: memberId,
+                name: userData?.name || "Unknown User",
+                email: userData?.email || "",
+                isAdmin: userData?.isAdmin || false,
+              }
+            })
+          )
+          setMembers(memberDetails)
+        }
+      } catch (error) {
+        console.error("Error fetching household members:", error)
       }
     }
 

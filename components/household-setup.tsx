@@ -16,7 +16,7 @@ export function HouseholdSetup() {
   const [householdName, setHouseholdName] = useState("")
   const [loading, setLoading] = useState(false)
   const [createdCode, setCreatedCode] = useState("")
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const { toast } = useToast()
 
   const generateHouseholdCode = () => {
@@ -30,61 +30,45 @@ export function HouseholdSetup() {
   }
 
   const createHousehold = async () => {
-    if (!user) return
-    if (!householdName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a household name",
-        variant: "destructive",
-      })
-      return
-    }
+    if (!user || !householdName.trim()) return
 
     setLoading(true)
     try {
-      console.log("Creating new household...")
       const code = generateHouseholdCode()
-      console.log("Generated household code:", code)
-
       const householdId = `household_${Date.now()}`
-      console.log("Generated household ID:", householdId)
-      console.log("User ID:", user.id)
-
-      // Create household document with setDoc
-      const householdRef = doc(db, "households", householdId)
-      await setDoc(householdRef, {
+      
+      // Create household document
+      const householdData = {
         id: householdId,
-        code: code,
         name: householdName.trim(),
+        code,
         admin: user.id,
         members: [user.id],
         createdAt: new Date().toISOString(),
-      })
-      console.log("Created household document:", householdId)
+      }
+
+      await setDoc(doc(db, "households", householdId), householdData)
 
       // Update user document
       const userRef = doc(db, "users", user.id)
       await updateDoc(userRef, {
-        householdId: householdId,
+        householdId,
         isAdmin: true,
+        householdName: householdName.trim(),
+        householdCode: code,
       })
-      console.log("Updated user document with household ID")
 
-      // Verify the updates
+      // Refresh user data
       const updatedUserDoc = await getDoc(userRef)
-      console.log("Updated user data:", updatedUserDoc.data())
-      
-      const householdDoc = await getDoc(householdRef)
-      console.log("Created household data:", householdDoc.data())
+      if (updatedUserDoc.exists()) {
+        const updatedUserData = updatedUserDoc.data()
+        await refreshUser()
+      }
 
-      setCreatedCode(code)
       toast({
         title: "Household created!",
-        description: `Your household code is: ${code}`,
+        description: "Your household has been set up successfully",
       })
-
-      // Force reload to update auth state
-      window.location.reload()
     } catch (error: any) {
       console.error("Error creating household:", error)
       toast({
@@ -97,102 +81,64 @@ export function HouseholdSetup() {
     }
   }
 
-  const joinHousehold = async () => {
-    if (!user || !householdCode) return
+  const handleJoinHousehold = async () => {
+    if (!user || !householdCode.trim()) return
 
     setLoading(true)
     try {
-      console.log("Joining household:", householdCode)
-      
-      // Check if household exists
-      const householdQuery = query(
-        collection(db, "households"),
-        where("code", "==", householdCode)
-      )
-      const householdSnapshot = await getDocs(householdQuery)
-      
-      if (householdSnapshot.empty) {
-        throw new Error("Household not found")
+      // Find household by code
+      const householdsRef = collection(db, "households")
+      const q = query(householdsRef, where("code", "==", householdCode.trim().toUpperCase()))
+      const querySnapshot = await getDocs(q)
+
+      if (querySnapshot.empty) {
+        toast({
+          title: "Invalid code",
+          description: "No household found with this code",
+          variant: "destructive",
+        })
+        return
       }
 
-      const householdDoc = householdSnapshot.docs[0]
+      const householdDoc = querySnapshot.docs[0]
       const householdData = householdDoc.data()
-      console.log("Found household:", householdData)
 
       // Check if user is already a member
       if (householdData.members.includes(user.id)) {
-        // If user is already a member but has no householdId (left previously),
-        // just update their user document
-        if (!user.householdId) {
-          const userRef = doc(db, "users", user.id)
-          await updateDoc(userRef, {
-            householdId: householdDoc.id,
-            isAdmin: false,
-            isActive: true
-          })
-
-          // Create system transaction for rejoining
-          await addDoc(collection(db, "transactions"), {
-            householdId: householdDoc.id,
-            amount: 0,
-            note: `${user.name} rejoined the household`,
-            timestamp: new Date().toISOString(),
-            type: "system",
-            userName: "System"
-          })
-
-          toast({
-            title: "Rejoined household!",
-            description: "You have successfully rejoined the household.",
-          })
-
-          // Force reload to update auth state
-          window.location.reload()
-          return
-        }
-        throw new Error("You are already a member of this household")
+        toast({
+          title: "Already a member",
+          description: "You are already a member of this household",
+          variant: "destructive",
+        })
+        return
       }
 
-      // Update household members
-      const householdRef = doc(db, "households", householdDoc.id)
-      await updateDoc(householdRef, {
-        members: [...householdData.members, user.id],
+      // Add user to household
+      const updatedMembers = [...householdData.members, user.id]
+      await updateDoc(householdDoc.ref, {
+        members: updatedMembers,
       })
-      console.log("Updated household members")
 
       // Update user document
       const userRef = doc(db, "users", user.id)
       await updateDoc(userRef, {
         householdId: householdDoc.id,
         isAdmin: false,
-        isActive: true
-      })
-      console.log("Updated user document with household ID")
-
-      // Create system transaction for new member
-      await addDoc(collection(db, "transactions"), {
-        householdId: householdDoc.id,
-        amount: 0,
-        note: `${user.name} joined the household`,
-        timestamp: new Date().toISOString(),
-        type: "system",
-        userName: "System"
+        householdName: householdData.name,
+        householdCode: householdData.code,
       })
 
-      // Verify the updates
+      // Refresh user data
       const updatedUserDoc = await getDoc(userRef)
-      console.log("Updated user data:", updatedUserDoc.data())
-      
-      const updatedHouseholdDoc = await getDoc(householdRef)
-      console.log("Updated household data:", updatedHouseholdDoc.data())
+      if (updatedUserDoc.exists()) {
+        const updatedUserData = updatedUserDoc.data()
+        await refreshUser()
+      }
 
       toast({
         title: "Joined household!",
-        description: "You have successfully joined the household.",
+        description: `Welcome to ${householdData.name}`,
       })
-
-      // Force reload to update auth state
-      window.location.reload()
     } catch (error: any) {
       console.error("Error joining household:", error)
       toast({
@@ -265,7 +211,7 @@ export function HouseholdSetup() {
                   />
                 </div>
                 <Button
-                  onClick={joinHousehold}
+                  onClick={handleJoinHousehold}
                   disabled={loading || !householdCode}
                   className="w-full"
                 >

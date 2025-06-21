@@ -13,6 +13,7 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null
   loading: boolean
   logout: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   firebaseUser: null,
   loading: true,
   logout: async () => {},
+  refreshUser: async () => {},
 })
 
 export const useAuth = () => useContext(AuthContext)
@@ -30,43 +32,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [authComplete, setAuthComplete] = useState(false)
 
+  const fetchUserData = async (firebaseUser: FirebaseUser) => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data()
+        setUser({ id: firebaseUser.uid, ...userData } as User)
+      } else {
+        // Create new user document if it doesn't exist
+        const newUser: User = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || "",
+          name: firebaseUser.displayName || "User",
+          createdAt: new Date().toISOString(),
+        }
+        await setDoc(doc(db, "users", firebaseUser.uid), newUser)
+        setUser(newUser)
+      }
+    } catch (error) {
+      console.error("Error fetching/creating user data:", error)
+      setUser(null)
+    }
+  }
+
+  const refreshUser = async () => {
+    if (firebaseUser) {
+      await fetchUserData(firebaseUser)
+    }
+  }
+
   useEffect(() => {
-    console.log("Setting up auth state listener...")
-    
     const startTime = Date.now()
     const minLoadingTime = 2000 // 2 seconds minimum loading time
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("Auth state changed:", firebaseUser ? "User logged in" : "No user")
       setFirebaseUser(firebaseUser)
 
       if (firebaseUser) {
-        try {
-          console.log("Fetching user data for:", firebaseUser.uid)
-          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data()
-            console.log("User data found:", userData)
-            setUser({ id: firebaseUser.uid, ...userData } as User)
-          } else {
-            console.log("No user document found, creating new user...")
-            // Create new user document if it doesn't exist
-            const newUser: User = {
-              id: firebaseUser.uid,
-              email: firebaseUser.email || "",
-              name: firebaseUser.displayName || "User",
-              createdAt: new Date().toISOString(),
-            }
-            await setDoc(doc(db, "users", firebaseUser.uid), newUser)
-            setUser(newUser)
-          }
-        } catch (error) {
-          console.error("Error fetching/creating user data:", error)
-          setUser(null)
-        }
+        await fetchUserData(firebaseUser)
       } else {
-        console.log("No firebase user, clearing user state")
         setUser(null)
       }
 
@@ -82,21 +87,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => {
-      console.log("Cleaning up auth state listener")
       unsubscribe()
     }
   }, [])
 
   const logout = async () => {
     try {
-      console.log("Logging out user...")
       await signOut(auth)
-      setUser(null)
-      setFirebaseUser(null)
     } catch (error) {
-      console.error("Error signing out:", error)
+      console.error("Error logging out:", error)
     }
   }
 
-  return <AuthContext.Provider value={{ user, firebaseUser, loading, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, firebaseUser, loading, logout, refreshUser }}>{children}</AuthContext.Provider>
 }

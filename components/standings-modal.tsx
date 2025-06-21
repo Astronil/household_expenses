@@ -1,12 +1,16 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useEffect, useState } from "react"
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { useAuth } from "@/components/auth-provider"
 import type { Transaction } from "@/types"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
-import { TrendingUp, TrendingDown, DollarSign, Users } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, Users, RefreshCw } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface StandingsModalProps {
   open: boolean
@@ -14,18 +18,73 @@ interface StandingsModalProps {
   transactions: Transaction[]
 }
 
+interface HouseholdMember {
+  id: string
+  name: string
+  email: string
+}
+
 export function StandingsModal({ open, onOpenChange, transactions }: StandingsModalProps) {
+  const { user } = useAuth()
+  const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([])
+
+  // Fetch household members
+  useEffect(() => {
+    const fetchHouseholdMembers = async () => {
+      if (!user?.householdId) return
+
+      try {
+        const householdRef = doc(db, "households", user.householdId)
+        const householdDoc = await getDoc(householdRef)
+        
+        if (householdDoc.exists()) {
+          const householdData = householdDoc.data()
+          const memberIds = householdData.members || []
+          
+          const memberDetails = await Promise.all(
+            memberIds.map(async (memberId: string) => {
+              const userDoc = await getDoc(doc(db, "users", memberId))
+              const userData = userDoc.data()
+              return {
+                id: memberId,
+                name: userData?.name || "Unknown User",
+                email: userData?.email || "",
+              }
+            })
+          )
+          setHouseholdMembers(memberDetails)
+        }
+      } catch (error) {
+        console.error("Error fetching household members:", error)
+      }
+    }
+
+    if (open) {
+      fetchHouseholdMembers()
+    }
+  }, [user?.householdId, open])
+
   const standings = useMemo(() => {
     const currentMonth = new Date().toISOString().slice(0, 7)
     const monthlyTransactions = transactions.filter((t) => t.month === currentMonth)
 
-    const userTotals = monthlyTransactions.reduce(
-      (acc, transaction) => {
-        acc[transaction.userName] = (acc[transaction.userName] || 0) + transaction.amount
-        return acc
-      },
-      {} as Record<string, number>,
-    )
+    // Create a map of all household members with their spending
+    const userTotals: Record<string, number> = {}
+    
+    // Initialize all household members with $0
+    householdMembers.forEach(member => {
+      userTotals[member.name] = 0
+    })
+    
+    // Add actual transaction amounts
+    monthlyTransactions.forEach(transaction => {
+      if (userTotals.hasOwnProperty(transaction.userName)) {
+        userTotals[transaction.userName] += transaction.amount
+      } else {
+        // Handle case where transaction user is not in household members
+        userTotals[transaction.userName] = (userTotals[transaction.userName] || 0) + transaction.amount
+      }
+    })
 
     const totalExpense = Object.values(userTotals).reduce((sum, amount) => sum + amount, 0)
     const userCount = Object.keys(userTotals).length
@@ -50,7 +109,7 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
     }))
 
     return { settlements: sortedSettlements, chartData, totalExpense, fairShare }
-  }, [transactions])
+  }, [transactions, householdMembers])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,8 +119,12 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
             <TrendingUp className="h-5 w-5" />
             Monthly Standings
           </DialogTitle>
-          <DialogDescription>
-            View the current month's expense breakdown and settlements
+          <DialogDescription className="flex items-center justify-between">
+            <span>View the current month's expense breakdown and settlements</span>
+            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
           </DialogDescription>
         </DialogHeader>
 
