@@ -28,9 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authComplete, setAuthComplete] = useState(false)
 
   useEffect(() => {
     console.log("Setting up auth state listener...")
+    
+    const startTime = Date.now()
+    const minLoadingTime = 2000 // 2 seconds minimum loading time
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("Auth state changed:", firebaseUser ? "User logged in" : "No user")
@@ -66,7 +70,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null)
       }
 
-      setLoading(false)
+      setAuthComplete(true)
+      
+      // Ensure minimum loading time
+      const elapsedTime = Date.now() - startTime
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime)
+      
+      setTimeout(() => {
+        setLoading(false)
+      }, remainingTime)
     })
 
     return () => {

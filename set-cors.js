@@ -5,10 +5,12 @@ const fs = require("fs");
 const serviceAccount = require("./service-account.json");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  storageBucket: "householdexpenses-795f4.appspot.com",
+  storageBucket: "householdexpenses-796f4.firebasestorage.app",
 });
 
-const bucket = admin.storage().bucket("householdexpenses-795f4.appspot.com");
+const bucket = admin
+  .storage()
+  .bucket("householdexpenses-796f4.firebasestorage.app");
 
 async function setCorsConfiguration() {
   try {

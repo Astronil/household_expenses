@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
+import { TrendingUp, TrendingDown, DollarSign, Users } from "lucide-react"
 
 interface StandingsModalProps {
   open: boolean
@@ -39,26 +40,69 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
       shouldReceive: spent > fairShare ? spent - fairShare : 0,
     }))
 
+    // Sort by highest spender first (shouldReceive amount)
+    const sortedSettlements = settlements.sort((a, b) => b.shouldReceive - a.shouldReceive)
+
     const chartData = settlements.map((s) => ({
       name: s.name,
       spent: s.spent,
       fairShare: s.fairShare,
     }))
 
-    return { settlements, chartData, totalExpense, fairShare }
+    return { settlements: sortedSettlements, chartData, totalExpense, fairShare }
   }, [transactions])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="mb-4">
-          <DialogTitle>Monthly Standings</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Monthly Standings
+          </DialogTitle>
           <DialogDescription>
             View the current month's expense breakdown and settlements
           </DialogDescription>
         </DialogHeader>
 
         <div className="w-full space-y-6 p-4 sm:p-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium">Total Spent</span>
+                </div>
+                <p className="text-2xl font-bold text-green-600">
+                  ${standings.totalExpense.toFixed(2)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">Fair Share</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-600">
+                  ${standings.fairShare.toFixed(2)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-medium">Participants</span>
+                </div>
+                <p className="text-2xl font-bold text-purple-600">
+                  {standings.settlements.length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Expense Overview</CardTitle>
@@ -87,29 +131,71 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
 
           <Card>
             <CardHeader>
-              <CardTitle>Detailed Breakdown</CardTitle>
+              <CardTitle>Monthly Settlements</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {standings.settlements.map((settlement, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {settlement.name}
-                        </p>
-                        <div className="w-full bg-gray-100 rounded-full h-2 mt-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="text-lg font-semibold truncate">
+                            {settlement.name}
+                          </p>
+                          {settlement.shouldReceive > 0 && (
+                            <TrendingUp className="h-4 w-4 text-green-600" />
+                          )}
+                          {settlement.shouldPay > 0 && (
+                            <TrendingDown className="h-4 w-4 text-red-600" />
+                          )}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Spent:</span>
+                            <span className="font-medium">${settlement.spent.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Fair Share:</span>
+                            <span className="font-medium">${settlement.fairShare.toFixed(2)}</span>
+                          </div>
+                        </div>
+
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                           <div
-                            className="bg-primary h-2 rounded-full"
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              settlement.shouldReceive > 0 
+                                ? 'bg-green-500' 
+                                : settlement.shouldPay > 0 
+                                ? 'bg-red-500' 
+                                : 'bg-blue-500'
+                            }`}
                             style={{
-                              width: `${(settlement.spent / settlement.fairShare) * 100}%`,
+                              width: `${Math.min((settlement.spent / settlement.fairShare) * 100, 100)}%`,
                             }}
                           />
                         </div>
                       </div>
-                      <p className="text-sm font-medium whitespace-nowrap">
-                        ${settlement.spent.toFixed(2)}
-                      </p>
+                      
+                      <div className="text-right">
+                        {settlement.shouldReceive > 0 ? (
+                          <div className="text-green-600">
+                            <p className="text-sm font-medium">Gets Back</p>
+                            <p className="text-xl font-bold">+${settlement.shouldReceive.toFixed(2)}</p>
+                          </div>
+                        ) : settlement.shouldPay > 0 ? (
+                          <div className="text-red-600">
+                            <p className="text-sm font-medium">Owes</p>
+                            <p className="text-xl font-bold">-${settlement.shouldPay.toFixed(2)}</p>
+                          </div>
+                        ) : (
+                          <div className="text-blue-600">
+                            <p className="text-sm font-medium">Balanced</p>
+                            <p className="text-xl font-bold">$0.00</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
