@@ -125,12 +125,12 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New Expense</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="w-full p-4 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="amount">Amount ($)</Label>
             <Input
@@ -165,7 +165,7 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
                 type="button"
                 variant="outline"
                 onClick={() => document.getElementById("receipt")?.click()}
-                className="flex-1 w-full sm:w-auto"
+                className="w-full"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 <span className="truncate">{receipt ? receipt.name : "Upload Receipt"}</span>
@@ -193,12 +193,12 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
             </div>
           )}
 
-          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
             <Button type="submit" disabled={loading || isSubmitting || isUploading} className="w-full sm:w-auto">
-              {loading ? "Adding..." : isSubmitting || isUploading ? "Saving..." : "Add Expense"}
+              {loading ? "Adding..." : "Add Expense"}
             </Button>
           </DialogFooter>
         </form>

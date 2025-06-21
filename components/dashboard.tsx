@@ -363,84 +363,90 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header>
-        <div className="flex items-center space-x-4">
-          <h1 className="text-2xl font-bold">{householdName}</h1>
-          {user?.isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCodeDialog(true)}
-              className="flex items-center gap-2"
-            >
-              <Key className="h-4 w-4" />
-              Show Code
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowStandings(true)}
-            className="flex items-center gap-2"
-          >
-            <Calculator className="h-4 w-4" />
-            Standings
-          </Button>
-          {user?.isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAdmin(true)}
-              className="flex items-center gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Admin
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Users className="h-4 w-4 mr-2" />
-                Members
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full">
+          <h1 className="text-xl sm:text-2xl font-bold truncate flex-1">{householdName}</h1>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            {user?.isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCodeDialog(true)}
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+              >
+                <Key className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Show Code</span>
+                <span className="sm:hidden">Code</span>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {householdMembers.map((member) => (
-                <DropdownMenuItem key={member.id}>
-                  {member.name}
-                  {member.id === user?.id && " (You)"}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              {user?.isAdmin ? (
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Household
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={() => setShowLeaveDialog(true)}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Leave Household
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowStandings(true)}
+              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+            >
+              <Calculator className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Standings</span>
+              <span className="sm:hidden">Stats</span>
+            </Button>
+            {user?.isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAdmin(true)}
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
+              >
+                <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Admin</span>
+                <span className="sm:hidden">Admin</span>
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Members</span>
+                  <span className="sm:hidden">Members</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 sm:w-56">
+                {householdMembers.map((member) => (
+                  <DropdownMenuItem key={member.id} className="text-sm">
+                    {member.name}
+                    {member.id === user?.id && " (You)"}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                {user?.isAdmin ? (
+                  <DropdownMenuItem
+                    className="text-destructive text-sm"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Household
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    className="text-destructive text-sm"
+                    onClick={() => setShowLeaveDialog(true)}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Leave Household
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </Header>
 
-      <main className="container mx-auto px-2 sm:px-6 md:px-8 py-6 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold">{householdName}</h1>
-            <div className="flex flex-wrap items-center gap-2">
+      <main className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col gap-4">
+          <div className="space-y-2">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{householdName}</h1>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full sm:w-auto">
+                  <Button variant="ghost" size="sm" className="w-full sm:w-auto justify-start">
                     <Users className="h-4 w-4 mr-2" />
                     Show Members ({householdMembers.length})
                   </Button>
@@ -456,7 +462,7 @@ export function Dashboard() {
               {user.isAdmin ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="w-full sm:w-auto">
+                    <Button variant="ghost" size="sm" className="w-full sm:w-auto justify-start">
                       <Settings className="h-4 w-4 mr-2" />
                       Admin Options
                     </Button>
@@ -480,7 +486,7 @@ export function Dashboard() {
                   variant="ghost" 
                   size="sm"
                   onClick={() => setShowLeaveDialog(true)}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto justify-start"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Leave Household
@@ -488,7 +494,7 @@ export function Dashboard() {
               )}
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
             <Button onClick={() => setShowAddTransaction(true)} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Add Expense

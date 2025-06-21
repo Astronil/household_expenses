@@ -152,72 +152,70 @@ export function HouseholdSetup() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
       <Card className="max-w-md mx-auto">
         <CardHeader>
-          <CardTitle>Household Setup</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Household Setup</CardTitle>
+          <CardDescription className="text-sm">
             Create a new household or join an existing one
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <Tabs defaultValue="create" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="create">Create Household</TabsTrigger>
-              <TabsTrigger value="join">Join Household</TabsTrigger>
+              <TabsTrigger value="create" className="text-xs sm:text-sm">Create Household</TabsTrigger>
+              <TabsTrigger value="join" className="text-xs sm:text-sm">Join Household</TabsTrigger>
             </TabsList>
-            <TabsContent value="create">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Household Name</Label>
-                  <Input
-                    id="name"
-                    value={householdName}
-                    onChange={(e) => setHouseholdName(e.target.value)}
-                    placeholder="Enter household name"
-                  />
-                </div>
-                <p className="text-sm text-gray-500">
-                  Create a new household to start tracking expenses with your family or roommates.
-                </p>
-                <Button
-                  onClick={createHousehold}
-                  disabled={loading || !householdName.trim()}
+            <TabsContent value="create" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Household Name</Label>
+                <Input
+                  id="name"
+                  value={householdName}
+                  onChange={(e) => setHouseholdName(e.target.value)}
+                  placeholder="Enter household name"
                   className="w-full"
-                >
-                  {loading ? "Creating..." : "Create New Household"}
-                </Button>
-                {createdCode && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm font-medium text-green-800">Household Code:</p>
-                    <p className="text-2xl font-bold text-green-900 mt-1">{createdCode}</p>
-                    <p className="text-sm text-green-600 mt-2">
-                      Share this code with others to let them join your household.
-                    </p>
-                  </div>
-                )}
+                />
               </div>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Create a new household to start tracking expenses with your family or roommates.
+              </p>
+              <Button
+                onClick={createHousehold}
+                disabled={loading || !householdName.trim()}
+                className="w-full"
+              >
+                {loading ? "Creating..." : "Create New Household"}
+              </Button>
+              {createdCode && (
+                <div className="mt-4 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-xs sm:text-sm font-medium text-green-800">Household Code:</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-900 mt-1">{createdCode}</p>
+                  <p className="text-xs sm:text-sm text-green-600 mt-2">
+                    Share this code with others to let them join your household.
+                  </p>
+                </div>
+              )}
             </TabsContent>
-            <TabsContent value="join">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="code">Household Code</Label>
-                  <Input
-                    id="code"
-                    value={householdCode}
-                    onChange={(e) => setHouseholdCode(e.target.value.toUpperCase())}
-                    placeholder="Enter 6-character code"
-                    maxLength={6}
-                  />
-                </div>
-                <Button
-                  onClick={handleJoinHousehold}
-                  disabled={loading || !householdCode}
+            <TabsContent value="join" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">Household Code</Label>
+                <Input
+                  id="code"
+                  value={householdCode}
+                  onChange={(e) => setHouseholdCode(e.target.value.toUpperCase())}
+                  placeholder="Enter 6-character code"
+                  maxLength={6}
                   className="w-full"
-                >
-                  {loading ? "Joining..." : "Join Household"}
-                </Button>
+                />
               </div>
+              <Button
+                onClick={handleJoinHousehold}
+                disabled={loading || !householdCode}
+                className="w-full"
+              >
+                {loading ? "Joining..." : "Join Household"}
+              </Button>
             </TabsContent>
           </Tabs>
         </CardContent>
