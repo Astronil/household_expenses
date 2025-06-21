@@ -11,6 +11,13 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { TrendingUp, TrendingDown, DollarSign, Users, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface StandingsModalProps {
   open: boolean
@@ -27,6 +34,20 @@ interface HouseholdMember {
 export function StandingsModal({ open, onOpenChange, transactions }: StandingsModalProps) {
   const { user } = useAuth()
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([])
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
+
+  const lastSixMonths = useMemo(() => {
+    const months = [];
+    const today = new Date();
+    for (let i = 0; i < 6; i++) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        months.push({
+            value: d.toISOString().slice(0, 7),
+            label: d.toLocaleString('default', { month: 'long', year: 'numeric' })
+        });
+    }
+    return months;
+  }, []);
 
   // Fetch household members
   useEffect(() => {
@@ -61,12 +82,13 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
 
     if (open) {
       fetchHouseholdMembers()
+      // Reset to current month when modal is opened
+      setSelectedMonth(new Date().toISOString().slice(0, 7))
     }
   }, [user?.householdId, open])
 
   const standings = useMemo(() => {
-    const currentMonth = new Date().toISOString().slice(0, 7)
-    const monthlyTransactions = transactions.filter((t) => t.month === currentMonth)
+    const monthlyTransactions = transactions.filter((t) => t.month === selectedMonth)
 
     // Create a map of all household members with their spending
     const userTotals: Record<string, number> = {}
@@ -109,7 +131,7 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
     }))
 
     return { settlements: sortedSettlements, chartData, totalExpense, fairShare }
-  }, [transactions, householdMembers])
+  }, [transactions, householdMembers, selectedMonth])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,11 +142,19 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
             Monthly Standings
           </DialogTitle>
           <DialogDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <span className="text-sm">View the current month's expense breakdown and settlements</span>
-            <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+            <span className="text-sm">View expense breakdown and settlements by month.</span>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Select month" />
+              </SelectTrigger>
+              <SelectContent>
+                {lastSixMonths.map(month => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </DialogDescription>
         </DialogHeader>
 
