@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/components/auth-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { Footer } from "@/components/footer"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   title: "Household Expense Tracker",
   description: "Track shared grocery expenses with your household",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/spending.png",
   },
 }
 
@@ -35,6 +36,7 @@ export default function RootLayout({
           </main>
           <Toaster />
         </AuthProvider>
+        <Footer />
       </body>
     </html>
   )
