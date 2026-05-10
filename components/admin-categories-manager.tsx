@@ -28,14 +28,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Pencil, Trash2 } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Pencil, Trash2, Loader2 } from "lucide-react"
 
 export function AdminCategoriesManager() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const { categories, subcategories, subcategoriesByCategory } = useExpenseCategories(
-    user?.householdId
-  )
+  const {
+    categories,
+    subcategories,
+    subcategoriesByCategory,
+    loading: categoriesLoading,
+    error: categoriesError,
+  } = useExpenseCategories(user?.householdId)
 
   const [newCategoryName, setNewCategoryName] = useState("")
   const [newSubName, setNewSubName] = useState("")
@@ -222,6 +227,26 @@ export function AdminCategoriesManager() {
 
   return (
     <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6 max-w-4xl">
+      {categoriesError && (
+        <Alert variant="destructive">
+          <AlertTitle>Could not load categories from Firestore</AlertTitle>
+          <AlertDescription className="text-sm space-y-1">
+            <p>{categoriesError}</p>
+            <p className="text-muted-foreground">
+              If you see “index” in the message, open the Firebase console link from the error or run{" "}
+              <code className="rounded bg-muted px-1">firebase deploy --only firestore:indexes</code>.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {categoriesLoading && !categoriesError && categories.length === 0 && (
+        <div className="flex items-center gap-2 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+          Loading categories and subcategories…
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Categories</CardTitle>

@@ -50,6 +50,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 
 const PAGE_SIZE = 35
@@ -65,7 +66,12 @@ function minIso(a: string, b: string): string {
 export function TransactionsView() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const { categories, subcategoriesByCategory } = useExpenseCategories(user?.householdId)
+  const {
+    categories,
+    subcategoriesByCategory,
+    loading: categoriesLoading,
+    error: categoriesError,
+  } = useExpenseCategories(user?.householdId)
 
   const [members, setMembers] = useState<{ id: string; name: string }[]>([])
 
@@ -410,6 +416,19 @@ export function TransactionsView() {
               Clear all
             </Button>
           </div>
+
+          {categoriesError && (
+            <Alert variant="destructive">
+              <AlertTitle>Category filters unavailable</AlertTitle>
+              <AlertDescription className="text-sm">{categoriesError}</AlertDescription>
+            </Alert>
+          )}
+          {categoriesLoading && !categoriesError && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading category list…
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">

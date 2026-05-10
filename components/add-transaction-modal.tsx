@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { collection, addDoc } from "firebase/firestore"
-import { ref, uploadBytesResumable } from "firebase/storage"
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 import { db, storage } from "@/lib/firebase"
 import { useAuth } from "@/components/auth-provider"
 import { useExpenseCategories } from "@/lib/hooks/use-expense-categories"
@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Upload } from "lucide-react"
+import { Loader2, Upload } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface AddTransactionModalProps {
   open: boolean
@@ -34,7 +35,8 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const { categories, subcategoriesByCategory } = useExpenseCategories(user?.householdId)
+  const { categories, subcategoriesByCategory, loading: categoriesLoading, error: categoriesError } =
+    useExpenseCategories(user?.householdId)
 
   useEffect(() => {
     if (!open) {
@@ -195,6 +197,22 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
             />
           </div>
 
+          {categoriesError && (
+            <Alert variant="destructive">
+              <AlertTitle>Categories unavailable</AlertTitle>
+              <AlertDescription className="text-sm">
+                {categoriesError}. You can still save this expense without a category. Check the browser
+                console for details.
+              </AlertDescription>
+            </Alert>
+          )}
+          {categoriesLoading && !categoriesError && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading categories…
+            </div>
+          )}
+
           <CategorySubcategoryFields
             categories={categories}
             subcategoriesForCategory={categoryId ? subcategoriesByCategory.get(categoryId) ?? [] : []}
@@ -202,7 +220,7 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
             subcategoryId={subcategoryId}
             onCategoryChange={setCategoryId}
             onSubcategoryChange={setSubcategoryId}
-            disabled={loading || isSubmitting || isUploading}
+            disabled={loading || isSubmitting || isUploading || categoriesLoading}
             idPrefix="add-tx"
           />
 

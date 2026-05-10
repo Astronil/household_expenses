@@ -36,22 +36,6 @@
       ]
     },
     {
-      "collectionGroup": "categories",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "householdId", "order": "ASCENDING" },
-        { "fieldPath": "name", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "subcategories",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "householdId", "order": "ASCENDING" },
-        { "fieldPath": "name", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "subcategories",
       "queryScope": "COLLECTION",
       "fields": [
