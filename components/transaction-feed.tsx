@@ -4,11 +4,11 @@ import { useState } from "react"
 import Link from "next/link"
 import type { Transaction } from "@/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LoadingSpinner } from "@/components/loading-spinner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ReceiptViewer } from "@/components/receipt-viewer"
 import { useAuth } from "@/components/auth-provider"
+import { Loader2 } from "lucide-react"
 
 interface TransactionFeedProps {
   transactions: Transaction[]
@@ -46,8 +46,9 @@ export function TransactionFeed({
         <CardHeader>
           <CardTitle>{title}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <LoadingSpinner />
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden />
+          <p className="text-sm">Loading transactions…</p>
         </CardContent>
       </Card>
     )
@@ -78,14 +79,17 @@ export function TransactionFeed({
       </CardHeader>
       <CardContent className="space-y-4">
         {visible.map((transaction) => (
-          <Card key={transaction.id} className="overflow-hidden">
+          <Card
+            key={transaction.id}
+            className="overflow-hidden border-border/50 bg-muted/20 shadow-none backdrop-blur-sm transition-colors duration-200 hover:bg-muted/30"
+          >
             <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">${transaction.amount.toFixed(2)}</p>
                     {transaction.type === "system" && (
-                      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">
+                      <span className="rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
                         System
                       </span>
                     )}
@@ -107,8 +111,8 @@ export function TransactionFeed({
                   {showMember && transaction.userName && transaction.type !== "system" && (
                     <p className="text-xs text-muted-foreground">By {transaction.userName}</p>
                   )}
-                  <p className="text-sm text-gray-500">{transaction.note}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-sm text-muted-foreground">{transaction.note}</p>
+                  <p className="text-xs text-muted-foreground/80">
                     {new Date(transaction.timestamp).toLocaleString()}
                   </p>
                 </div>

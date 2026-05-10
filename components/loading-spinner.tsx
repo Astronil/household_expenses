@@ -1,64 +1,40 @@
-import { Loader2, Home, Calculator, CreditCard, TrendingUp } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 export function LoadingSpinner() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Main loading container */}
-      <div className="text-center space-y-8 p-8">
-        {/* Animated home equipment icons */}
-        <div className="flex justify-center space-x-8 mb-8">
-          <div className="animate-bounce" style={{ animationDelay: '0ms' }}>
-            <Home className="h-12 w-12 text-blue-600" />
-          </div>
-          <div className="animate-bounce" style={{ animationDelay: '150ms' }}>
-            <Calculator className="h-12 w-12 text-green-600" />
-          </div>
-          <div className="animate-bounce" style={{ animationDelay: '300ms' }}>
-            <CreditCard className="h-12 w-12 text-purple-600" />
-          </div>
-          <div className="animate-bounce" style={{ animationDelay: '450ms' }}>
-            <TrendingUp className="h-12 w-12 text-orange-600" />
-          </div>
-        </div>
-
-        {/* Welcome message */}
-        <div className="space-y-4">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Welcome to Household Expenses
-          </h1>
-          <p className="text-lg text-gray-600 max-w-md mx-auto">
-            Setting up your financial dashboard...
-          </p>
-        </div>
-
-        {/* Loading spinner */}
-        <div className="flex justify-center mt-8">
-          <div className="relative">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <div className="absolute inset-0 rounded-full border-4 border-blue-200 animate-ping"></div>
-          </div>
-        </div>
-
-        {/* Loading dots */}
-        <div className="flex justify-center space-x-2 mt-4">
-          <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
-          <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
-          <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
-        </div>
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden p-6">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_center,black,transparent_72%)]"
+        aria-hidden
+      >
+        <div className="absolute left-1/4 top-1/4 h-64 w-64 animate-pulse rounded-full bg-primary/25 blur-3xl" />
+        <div
+          className="absolute bottom-1/4 right-1/4 h-56 w-56 animate-pulse rounded-full bg-chart-2/20 blur-3xl"
+          style={{ animationDelay: "800ms" }}
+        />
       </div>
-
-      {/* Decorative elements */}
-      <div className="absolute top-10 left-10 opacity-20">
-        <Home className="h-16 w-16 text-blue-400" />
-      </div>
-      <div className="absolute top-20 right-20 opacity-20">
-        <Calculator className="h-12 w-12 text-green-400" />
-      </div>
-      <div className="absolute bottom-20 left-20 opacity-20">
-        <CreditCard className="h-14 w-14 text-purple-400" />
-      </div>
-      <div className="absolute bottom-10 right-10 opacity-20">
-        <TrendingUp className="h-16 w-16 text-orange-400" />
+      <div
+        className="relative z-10 w-full max-w-sm space-y-6 rounded-2xl border border-border/50 bg-card/85 px-8 py-10 text-center shadow-[0_24px_64px_-24px_hsl(var(--foreground)/0.22)] backdrop-blur-xl supports-[backdrop-filter]:bg-card/70"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+          <Loader2 className="h-7 w-7 animate-spin" aria-hidden />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Household Expenses</h1>
+          <p className="text-sm text-muted-foreground">Preparing your dashboard…</p>
+        </div>
+        <div className="flex justify-center gap-1.5 pt-1" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary/60"
+              style={{ animationDelay: `${i * 160}ms` }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

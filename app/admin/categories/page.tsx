@@ -40,7 +40,7 @@ function AdminCategoriesPageInner() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-dvh">
       <Header>
         <h1 className="text-lg sm:text-xl font-bold">Expense categories</h1>
       </Header>

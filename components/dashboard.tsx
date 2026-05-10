@@ -399,13 +399,13 @@ export function Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-dvh">
         <Header />
         <main className="container mx-auto px-4 py-6">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h2 className="text-red-800 font-semibold">Error Loading Dashboard</h2>
-            <p className="text-red-600 mt-2">{error}</p>
-            <p className="text-red-600 mt-2">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
+            <h2 className="font-semibold text-destructive">Error Loading Dashboard</h2>
+            <p className="mt-2 text-sm opacity-90">{error}</p>
+            <p className="mt-2 text-sm opacity-90">
               If you see an error about missing indexes, please wait a few minutes for the index to be created.
             </p>
           </div>
@@ -415,7 +415,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-dvh">
       <Header>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full">
           <h1 className="text-xl sm:text-2xl font-bold truncate flex-1">{householdName}</h1>
@@ -496,7 +496,7 @@ export function Dashboard() {
       <main className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-4">
           <div className="space-y-2">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{householdName}</h1>
+            <h2 className="text-xl font-bold sm:text-2xl md:text-3xl">{householdName}</h2>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -682,9 +682,9 @@ export function Dashboard() {
               Share this code with others to let them join your household
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg my-4">
+          <div className="my-4 flex items-center justify-between rounded-xl border border-border/50 bg-muted/40 p-4 backdrop-blur-sm">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-500">Your Household Code</p>
+              <p className="text-sm font-medium text-muted-foreground">Your Household Code</p>
               <p className="text-2xl font-bold">{householdCode}</p>
             </div>
             <Button variant="outline" size="sm" onClick={copyToClipboard}>

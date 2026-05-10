@@ -410,7 +410,7 @@ export function TransactionsView() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-dvh">
       <Header>
         <h1 className="text-lg sm:text-xl font-bold">Transactions</h1>
       </Header>
@@ -423,7 +423,7 @@ export function TransactionsView() {
           the same way.
         </p>
 
-        <div className="rounded-lg border bg-card p-4 space-y-4 shadow-sm">
+        <div className="glass-surface space-y-4 rounded-xl p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-semibold">Filters</h2>
             <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>

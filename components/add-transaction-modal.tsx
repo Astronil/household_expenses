@@ -277,20 +277,22 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
           </div>
 
           {(isSubmitting || isUploading) && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg text-center w-[90vw] sm:w-auto max-w-sm">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm">
+              <div className="w-[90vw] max-w-sm rounded-2xl border border-border/50 bg-card/90 p-4 text-center shadow-2xl backdrop-blur-xl supports-[backdrop-filter]:bg-card/75 sm:w-auto sm:p-6">
                 {isUploading ? (
                   <>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div className="mb-4 h-2.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                        className="h-2.5 rounded-full bg-primary transition-all duration-300"
                         style={{ width: `${uploadProgress}%` }}
-                      ></div>
+                      />
                     </div>
-                    <p className="text-sm text-gray-600">Uploading image... {Math.round(uploadProgress)}%</p>
+                    <p className="text-sm text-muted-foreground">
+                      Uploading image… {Math.round(uploadProgress)}%
+                    </p>
                   </>
                 ) : (
-                  <p className="text-sm text-gray-600">Saving transaction...</p>
+                  <p className="text-sm text-muted-foreground">Saving transaction…</p>
                 )}
               </div>
             </div>

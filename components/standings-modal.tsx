@@ -231,7 +231,10 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
             <CardContent>
               <div className="space-y-3 sm:space-y-4">
                 {standings.settlements.map((settlement, index) => (
-                  <div key={index} className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors">
+                  <div
+                    key={index}
+                    className="rounded-xl border border-border/50 p-3 transition-colors duration-200 hover:bg-muted/50 sm:p-4"
+                  >
                     <div className="flex flex-col gap-3 sm:gap-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -268,16 +271,16 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
                       
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Spent:</span>
+                          <span className="text-muted-foreground">Spent:</span>
                           <span className="font-medium">${settlement.spent.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Fair Share:</span>
+                          <span className="text-muted-foreground">Fair Share:</span>
                           <span className="font-medium">${settlement.fairShare.toFixed(2)}</span>
                         </div>
                       </div>
 
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
                           className={`h-2 rounded-full transition-all duration-300 ${
                             settlement.shouldReceive > 0 
