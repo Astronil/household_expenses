@@ -53,7 +53,10 @@ import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 
-const PAGE_SIZE = 35
+/** Base page size for household + date query (single composite index). */
+const PAGE_SIZE = 50
+/** Larger batches when narrowing by category/member client-side (same Firestore query). */
+const PAGE_SIZE_WITH_META_HINT = 120
 
 function maxIso(a: string, b: string): string {
   return new Date(a) >= new Date(b) ? a : b
@@ -188,77 +191,76 @@ export function TransactionsView() {
     filterYear,
   ])
 
-  const firestoreKey = useMemo(
+  /** Only household + date range trigger a refetch. Category/member filters are applied client-side so we do not require extra Firestore composite indexes. */
+  const listQueryKey = useMemo(
     () =>
       JSON.stringify({
-        c: filterCategory,
-        s: filterSubcategory,
-        u: filterUserId,
         from: effectiveRange.fromIso,
         to: effectiveRange.toIso,
+        hid: user?.householdId ?? "",
       }),
-    [
-      filterCategory,
-      filterSubcategory,
-      filterUserId,
-      effectiveRange.fromIso,
-      effectiveRange.toIso,
-    ]
+    [effectiveRange.fromIso, effectiveRange.toIso, user?.householdId]
   )
+
+  const hasMetaLineFilter = !!(filterCategory || filterSubcategory || filterUserId)
+  const pageLimit = hasMetaLineFilter ? PAGE_SIZE_WITH_META_HINT : PAGE_SIZE
 
   const fetchPage = useCallback(
     async (cursor: QueryDocumentSnapshot<DocumentData> | null, append: boolean) => {
       if (!user?.householdId) return
 
       const hid = user.householdId
-      const base = [
+      const qConstraints = [
         where("householdId", "==", hid),
         where("timestamp", ">=", effectiveRange.fromIso),
         where("timestamp", "<=", effectiveRange.toIso),
-      ] as const
+        orderBy("timestamp", "desc"),
+        limit(pageLimit),
+      ]
 
-      const extra: ReturnType<typeof where>[] = []
-      if (filterCategory) extra.push(where("categoryId", "==", filterCategory))
-      if (filterSubcategory) extra.push(where("subcategoryId", "==", filterSubcategory))
-      if (filterUserId) extra.push(where("userId", "==", filterUserId))
-
-      const qConstraints = [...base, ...extra, orderBy("timestamp", "desc"), limit(PAGE_SIZE)]
       const q = cursor
         ? query(collection(db, "transactions"), ...qConstraints, startAfter(cursor))
         : query(collection(db, "transactions"), ...qConstraints)
 
-      const snap = await getDocs(q)
-      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Transaction))
-      const nextCursor =
-        snap.docs.length > 0 ? snap.docs[snap.docs.length - 1]! : null
-      const more = snap.docs.length === PAGE_SIZE
+      try {
+        const snap = await getDocs(q)
+        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Transaction))
+        const nextCursor =
+          snap.docs.length > 0 ? snap.docs[snap.docs.length - 1]! : null
+        const more = snap.docs.length === pageLimit
 
-      if (append) {
-        setRawRows((prev) => {
-          const seen = new Set(prev.map((r) => r.id))
-          const merged = [...prev]
-          for (const r of rows) {
-            if (!seen.has(r.id)) {
-              seen.add(r.id)
-              merged.push(r)
+        if (append) {
+          setRawRows((prev) => {
+            const seen = new Set(prev.map((r) => r.id))
+            const merged = [...prev]
+            for (const r of rows) {
+              if (!seen.has(r.id)) {
+                seen.add(r.id)
+                merged.push(r)
+              }
             }
-          }
-          return merged
+            return merged
+          })
+        } else {
+          setRawRows(rows)
+        }
+        setLastDoc(more ? nextCursor : null)
+        setHasMore(more)
+      } catch (e) {
+        console.error("[TransactionsView] fetchPage failed:", e)
+        toast({
+          title: "Could not load transactions",
+          description: e instanceof Error ? e.message : "Firestore query failed",
+          variant: "destructive",
         })
-      } else {
-        setRawRows(rows)
+        if (!append) {
+          setRawRows([])
+        }
+        setLastDoc(null)
+        setHasMore(false)
       }
-      setLastDoc(more ? nextCursor : null)
-      setHasMore(more)
     },
-    [
-      user?.householdId,
-      effectiveRange.fromIso,
-      effectiveRange.toIso,
-      filterCategory,
-      filterSubcategory,
-      filterUserId,
-    ]
+    [user?.householdId, effectiveRange.fromIso, effectiveRange.toIso, pageLimit, toast]
   )
 
   useEffect(() => {
@@ -277,8 +279,8 @@ export function TransactionsView() {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when firestoreKey changes
-  }, [user?.householdId, firestoreKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- listQueryKey drives server fetch
+  }, [user?.householdId, listQueryKey, fetchPage])
 
   const clientFiltered = useMemo(() => {
     const minA = amountMin === "" ? null : Number(amountMin)
@@ -286,12 +288,23 @@ export function TransactionsView() {
     const noteQ = noteSearch.trim().toLowerCase()
 
     return rawRows.filter((t) => {
+      if (filterCategory && (t.categoryId ?? "") !== filterCategory) return false
+      if (filterSubcategory && (t.subcategoryId ?? "") !== filterSubcategory) return false
+      if (filterUserId && (t.userId ?? "") !== filterUserId) return false
       if (minA !== null && !Number.isNaN(minA) && t.amount < minA) return false
       if (maxA !== null && !Number.isNaN(maxA) && t.amount > maxA) return false
       if (noteQ && !(t.note || "").toLowerCase().includes(noteQ)) return false
       return true
     })
-  }, [rawRows, amountMin, amountMax, noteSearch])
+  }, [
+    rawRows,
+    filterCategory,
+    filterSubcategory,
+    filterUserId,
+    amountMin,
+    amountMax,
+    noteSearch,
+  ])
 
   const loadMore = async () => {
     if (!lastDoc || loadingMore || loadingInitial) return
@@ -404,9 +417,10 @@ export function TransactionsView() {
 
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4">
         <p className="text-sm text-muted-foreground">
-          Showing expenses from the last 17 months (household scope). Use filters to narrow results;
-          amount and note filters apply to loaded pages — use &quot;Load more&quot; to scan further back
-          if needed.
+          Showing expenses from the last 17 months (household scope). Category, subcategory, and member
+          filters apply to the transactions already loaded below — if a filter hides everything, use
+          &quot;Load more&quot; to pull older rows from the same date range. Amount and note filters work
+          the same way.
         </p>
 
         <div className="rounded-lg border bg-card p-4 space-y-4 shadow-sm">
@@ -615,6 +629,24 @@ export function TransactionsView() {
             </div>
           </div>
         </div>
+
+        {!loadingInitial &&
+          clientFiltered.length === 0 &&
+          rawRows.length > 0 &&
+          (filterCategory ||
+            filterSubcategory ||
+            filterUserId ||
+            amountMin ||
+            amountMax ||
+            noteSearch) && (
+            <Alert>
+              <AlertTitle>No matches in loaded data</AlertTitle>
+              <AlertDescription>
+                {rawRows.length} transaction(s) loaded, but none match the current filters. Try{" "}
+                &quot;Load more&quot; to fetch older rows, or relax filters / widen the date range.
+              </AlertDescription>
+            </Alert>
+          )}
 
         <TransactionFeed
           transactions={clientFiltered}
