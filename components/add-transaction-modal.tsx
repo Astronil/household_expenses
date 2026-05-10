@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { collection, addDoc } from "firebase/firestore"
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 import { db, storage } from "@/lib/firebase"
@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Upload } from "lucide-react"
+import { Camera, Loader2, Upload } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface AddTransactionModalProps {
@@ -37,6 +37,9 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
   const [uploadProgress, setUploadProgress] = useState(0)
   const { categories, subcategoriesByCategory, loading: categoriesLoading, error: categoriesError } =
     useExpenseCategories(user?.householdId)
+
+  const receiptGalleryInputRef = useRef<HTMLInputElement>(null)
+  const receiptCameraInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open) {
@@ -161,6 +164,7 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
     if (file) {
       setReceipt(file)
     }
+    e.target.value = ""
   }
 
   return (
@@ -225,17 +229,49 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
           />
 
           <div className="space-y-2">
-            <Label htmlFor="receipt">Receipt (optional)</Label>
-            <div className="flex items-center space-x-2">
-              <Input id="receipt" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            <Label>Receipt (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Gallery: files and photo library. Camera: opens the device camera (recommended on Android).
+            </p>
+            <div className="flex items-center gap-2">
+              {/* Gallery / files only — same as a typical desktop &quot;choose file&quot; flow */}
+              <input
+                ref={receiptGalleryInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleFileChange}
+                aria-label="Choose receipt image from gallery or files"
+              />
+              {/* Explicit camera capture — required on many Android browsers to offer the camera at all */}
+              <input
+                ref={receiptCameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                onChange={handleFileChange}
+                aria-label="Take receipt photo with camera"
+              />
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => document.getElementById("receipt")?.click()}
-                className="w-full"
+                className="min-w-0 flex-1"
+                onClick={() => receiptGalleryInputRef.current?.click()}
               >
-                <Upload className="h-4 w-4 mr-2" />
-                <span className="truncate">{receipt ? receipt.name : "Upload Receipt"}</span>
+                <Upload className="h-4 w-4 mr-2 shrink-0" />
+                <span className="truncate">{receipt ? receipt.name : "Gallery / files"}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                title="Take photo"
+                aria-label="Take photo with camera"
+                onClick={() => receiptCameraInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4" />
               </Button>
             </div>
           </div>
