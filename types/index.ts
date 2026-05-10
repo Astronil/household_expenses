@@ -18,17 +18,40 @@ export interface Household {
   createdAt: string;
 }
 
+export interface ExpenseCategory {
+  id: string;
+  householdId: string;
+  name: string;
+  nameKey: string;
+  createdAt: string;
+}
+
+export interface ExpenseSubcategory {
+  id: string;
+  householdId: string;
+  categoryId: string;
+  name: string;
+  nameKey: string;
+  createdAt: string;
+}
+
 export interface Transaction {
   id: string;
-  userId: string;
+  /** Present for user expenses; omitted on some legacy/system rows */
+  userId?: string;
   userName: string;
   householdId: string;
   amount: number;
   note?: string;
   receiptUrl?: string;
   timestamp: string;
-  month: string;
+  month?: string;
   type?: "system" | "expense";
+  /** Optional; older transactions may omit these */
+  categoryId?: string;
+  subcategoryId?: string;
+  categoryName?: string;
+  subcategoryName?: string;
 }
 
 export interface Standing {

@@ -13,6 +13,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/households/$(householdId)).data.members.hasAny([request.auth.uid]);
     }
 
+    function isHouseholdAdmin(householdId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/households/$(householdId)) &&
+        get(/databases/$(database)/documents/households/$(householdId)).data.admin == request.auth.uid;
+    }
+
     // Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -35,6 +41,24 @@ service cloud.firestore {
       allow read: if isAuthenticated() && isHouseholdMember(resource.data.householdId);
       allow create: if isAuthenticated() && isHouseholdMember(request.resource.data.householdId);
       allow update, delete: if isAuthenticated() && isHouseholdMember(resource.data.householdId);
+    }
+
+    // Expense categories (household-scoped; only household admin can write)
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated() && isHouseholdMember(resource.data.householdId);
+      allow create: if isAuthenticated() &&
+        isHouseholdAdmin(request.resource.data.householdId) &&
+        request.resource.data.householdId is string;
+      allow update, delete: if isAuthenticated() && isHouseholdAdmin(resource.data.householdId);
+    }
+
+    match /subcategories/{subcategoryId} {
+      allow read: if isAuthenticated() && isHouseholdMember(resource.data.householdId);
+      allow create: if isAuthenticated() &&
+        isHouseholdAdmin(request.resource.data.householdId) &&
+        request.resource.data.householdId is string &&
+        request.resource.data.categoryId is string;
+      allow update, delete: if isAuthenticated() && isHouseholdAdmin(resource.data.householdId);
     }
   }
 } 

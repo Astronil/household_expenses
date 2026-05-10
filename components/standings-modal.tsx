@@ -36,18 +36,18 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([])
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
 
-  const lastSixMonths = useMemo(() => {
-    const months = [];
-    const today = new Date();
-    for (let i = 0; i < 6; i++) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        months.push({
-            value: d.toISOString().slice(0, 7),
-            label: d.toLocaleString('default', { month: 'long', year: 'numeric' })
-        });
+  const monthPickerOptions = useMemo(() => {
+    const months: { value: string; label: string }[] = []
+    const today = new Date()
+    for (let i = 0; i < 17; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+      months.push({
+        value: d.toISOString().slice(0, 7),
+        label: d.toLocaleString("default", { month: "long", year: "numeric" }),
+      })
     }
-    return months;
-  }, []);
+    return months
+  }, [])
 
   // Fetch household members
   useEffect(() => {
@@ -88,7 +88,9 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
   }, [user?.householdId, open])
 
   const standings = useMemo(() => {
-    const monthlyTransactions = transactions.filter((t) => t.month === selectedMonth)
+    const monthlyTransactions = transactions.filter(
+      (t) => (t.month ?? t.timestamp.slice(0, 7)) === selectedMonth
+    )
 
     // Create a map of all household members with their spending
     const userTotals: Record<string, number> = {}
@@ -148,7 +150,7 @@ export function StandingsModal({ open, onOpenChange, transactions }: StandingsMo
                 <SelectValue placeholder="Select month" />
               </SelectTrigger>
               <SelectContent>
-                {lastSixMonths.map(month => (
+                {monthPickerOptions.map(month => (
                   <SelectItem key={month.value} value={month.value}>
                     {month.label}
                   </SelectItem>

@@ -2,12 +2,14 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { collection, addDoc } from "firebase/firestore"
-import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from "firebase/storage"
+import { ref, uploadBytesResumable } from "firebase/storage"
 import { db, storage } from "@/lib/firebase"
 import { useAuth } from "@/components/auth-provider"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { useExpenseCategories } from "@/lib/hooks/use-expense-categories"
+import { CategorySubcategoryFields } from "@/components/category-subcategory-fields"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,6 +25,8 @@ interface AddTransactionModalProps {
 export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalProps) {
   const [amount, setAmount] = useState("")
   const [note, setNote] = useState("")
+  const [categoryId, setCategoryId] = useState("")
+  const [subcategoryId, setSubcategoryId] = useState("")
   const [receipt, setReceipt] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
@@ -30,6 +34,17 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const { categories, subcategoriesByCategory } = useExpenseCategories(user?.householdId)
+
+  useEffect(() => {
+    if (!open) {
+      setAmount("")
+      setNote("")
+      setCategoryId("")
+      setSubcategoryId("")
+      setReceipt(null)
+    }
+  }, [open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,7 +95,11 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
       }
 
       const now = new Date()
-      const transaction = {
+      const cat = categoryId ? categories.find((c) => c.id === categoryId) : undefined
+      const subs = categoryId ? subcategoriesByCategory.get(categoryId) ?? [] : []
+      const sub = subcategoryId ? subs.find((s) => s.id === subcategoryId) : undefined
+
+      const transaction: Record<string, unknown> = {
         userId: user.id,
         userName: user.name,
         householdId: user.householdId!,
@@ -89,6 +108,23 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
         receiptUrl: receiptUrl || null,
         timestamp: now.toISOString(),
         month: now.toISOString().slice(0, 7),
+      }
+
+      if (categoryId && cat) {
+        transaction.categoryId = categoryId
+        transaction.categoryName = cat.name
+        if (subcategoryId && sub) {
+          transaction.subcategoryId = subcategoryId
+          transaction.subcategoryName = sub.name
+        } else {
+          transaction.subcategoryId = null
+          transaction.subcategoryName = null
+        }
+      } else {
+        transaction.categoryId = null
+        transaction.categoryName = null
+        transaction.subcategoryId = null
+        transaction.subcategoryName = null
       }
 
       await addDoc(collection(db, "transactions"), transaction)
@@ -100,6 +136,8 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
 
       setAmount("")
       setNote("")
+      setCategoryId("")
+      setSubcategoryId("")
       setReceipt(null)
       onOpenChange(false)
     } catch (error: any) {
@@ -156,6 +194,17 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
               className="w-full resize-none"
             />
           </div>
+
+          <CategorySubcategoryFields
+            categories={categories}
+            subcategoriesForCategory={categoryId ? subcategoriesByCategory.get(categoryId) ?? [] : []}
+            categoryId={categoryId}
+            subcategoryId={subcategoryId}
+            onCategoryChange={setCategoryId}
+            onSubcategoryChange={setSubcategoryId}
+            disabled={loading || isSubmitting || isUploading}
+            idPrefix="add-tx"
+          />
 
           <div className="space-y-2">
             <Label htmlFor="receipt">Receipt (optional)</Label>
