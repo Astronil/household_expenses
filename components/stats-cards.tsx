@@ -22,12 +22,14 @@ export function StatsCards({ transactions }: StatsCardsProps) {
       .filter((t) => new Date(t.timestamp) >= weekAgo)
       .reduce((sum, t) => sum + t.amount, 0)
 
+    const monthKey = (t: (typeof transactions)[0]) => t.month ?? t.timestamp.slice(0, 7)
+
     const thisMonthUserTotal = transactions
-      .filter((t) => t.month === currentMonth && t.userId === user?.id)
+      .filter((t) => monthKey(t) === currentMonth && t.userId === user?.id)
       .reduce((sum, t) => sum + t.amount, 0)
 
     const thisMonthHouseholdTotal = transactions
-      .filter((t) => t.month === currentMonth)
+      .filter((t) => monthKey(t) === currentMonth)
       .reduce((sum, t) => sum + t.amount, 0)
 
     return {

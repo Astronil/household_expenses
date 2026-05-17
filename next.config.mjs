@@ -16,7 +16,6 @@ const nextConfig = {
       },
     ],
   },
-  output: "standalone",
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ["@radix-ui/react-icons", "lucide-react"],

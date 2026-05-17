@@ -2,18 +2,21 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { collection, addDoc } from "firebase/firestore"
-import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from "firebase/storage"
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 import { db, storage } from "@/lib/firebase"
 import { useAuth } from "@/components/auth-provider"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { useExpenseCategories } from "@/lib/hooks/use-expense-categories"
+import { CategorySubcategoryFields } from "@/components/category-subcategory-fields"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Upload } from "lucide-react"
+import { Camera, Loader2, Upload } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface AddTransactionModalProps {
   open: boolean
@@ -23,6 +26,8 @@ interface AddTransactionModalProps {
 export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalProps) {
   const [amount, setAmount] = useState("")
   const [note, setNote] = useState("")
+  const [categoryId, setCategoryId] = useState("")
+  const [subcategoryId, setSubcategoryId] = useState("")
   const [receipt, setReceipt] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
@@ -30,6 +35,21 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const { categories, subcategoriesByCategory, loading: categoriesLoading, error: categoriesError } =
+    useExpenseCategories(user?.householdId)
+
+  const receiptGalleryInputRef = useRef<HTMLInputElement>(null)
+  const receiptCameraInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!open) {
+      setAmount("")
+      setNote("")
+      setCategoryId("")
+      setSubcategoryId("")
+      setReceipt(null)
+    }
+  }, [open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,7 +100,11 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
       }
 
       const now = new Date()
-      const transaction = {
+      const cat = categoryId ? categories.find((c) => c.id === categoryId) : undefined
+      const subs = categoryId ? subcategoriesByCategory.get(categoryId) ?? [] : []
+      const sub = subcategoryId ? subs.find((s) => s.id === subcategoryId) : undefined
+
+      const transaction: Record<string, unknown> = {
         userId: user.id,
         userName: user.name,
         householdId: user.householdId!,
@@ -89,6 +113,23 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
         receiptUrl: receiptUrl || null,
         timestamp: now.toISOString(),
         month: now.toISOString().slice(0, 7),
+      }
+
+      if (categoryId && cat) {
+        transaction.categoryId = categoryId
+        transaction.categoryName = cat.name
+        if (subcategoryId && sub) {
+          transaction.subcategoryId = subcategoryId
+          transaction.subcategoryName = sub.name
+        } else {
+          transaction.subcategoryId = null
+          transaction.subcategoryName = null
+        }
+      } else {
+        transaction.categoryId = null
+        transaction.categoryName = null
+        transaction.subcategoryId = null
+        transaction.subcategoryName = null
       }
 
       await addDoc(collection(db, "transactions"), transaction)
@@ -100,6 +141,8 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
 
       setAmount("")
       setNote("")
+      setCategoryId("")
+      setSubcategoryId("")
       setReceipt(null)
       onOpenChange(false)
     } catch (error: any) {
@@ -121,6 +164,7 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
     if (file) {
       setReceipt(file)
     }
+    e.target.value = ""
   }
 
   return (
@@ -157,37 +201,98 @@ export function AddTransactionModal({ open, onOpenChange }: AddTransactionModalP
             />
           </div>
 
+          {categoriesError && (
+            <Alert variant="destructive">
+              <AlertTitle>Categories unavailable</AlertTitle>
+              <AlertDescription className="text-sm">
+                {categoriesError}. You can still save this expense without a category. Check the browser
+                console for details.
+              </AlertDescription>
+            </Alert>
+          )}
+          {categoriesLoading && !categoriesError && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading categories…
+            </div>
+          )}
+
+          <CategorySubcategoryFields
+            categories={categories}
+            subcategoriesForCategory={categoryId ? subcategoriesByCategory.get(categoryId) ?? [] : []}
+            categoryId={categoryId}
+            subcategoryId={subcategoryId}
+            onCategoryChange={setCategoryId}
+            onSubcategoryChange={setSubcategoryId}
+            disabled={loading || isSubmitting || isUploading || categoriesLoading}
+            idPrefix="add-tx"
+          />
+
           <div className="space-y-2">
-            <Label htmlFor="receipt">Receipt (optional)</Label>
-            <div className="flex items-center space-x-2">
-              <Input id="receipt" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            <Label>Receipt (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Gallery: files and photo library. Camera: opens the device camera (recommended on Android).
+            </p>
+            <div className="flex items-center gap-2">
+              {/* Gallery / files only — same as a typical desktop &quot;choose file&quot; flow */}
+              <input
+                ref={receiptGalleryInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleFileChange}
+                aria-label="Choose receipt image from gallery or files"
+              />
+              {/* Explicit camera capture — required on many Android browsers to offer the camera at all */}
+              <input
+                ref={receiptCameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                onChange={handleFileChange}
+                aria-label="Take receipt photo with camera"
+              />
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => document.getElementById("receipt")?.click()}
-                className="w-full"
+                className="min-w-0 flex-1"
+                onClick={() => receiptGalleryInputRef.current?.click()}
               >
-                <Upload className="h-4 w-4 mr-2" />
-                <span className="truncate">{receipt ? receipt.name : "Upload Receipt"}</span>
+                <Upload className="h-4 w-4 mr-2 shrink-0" />
+                <span className="truncate">{receipt ? receipt.name : "Gallery / files"}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                title="Take photo"
+                aria-label="Take photo with camera"
+                onClick={() => receiptCameraInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           {(isSubmitting || isUploading) && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg text-center w-[90vw] sm:w-auto max-w-sm">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm">
+              <div className="w-[90vw] max-w-sm rounded-2xl border border-border/50 bg-card/90 p-4 text-center shadow-2xl backdrop-blur-xl supports-[backdrop-filter]:bg-card/75 sm:w-auto sm:p-6">
                 {isUploading ? (
                   <>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div className="mb-4 h-2.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                        className="h-2.5 rounded-full bg-primary transition-all duration-300"
                         style={{ width: `${uploadProgress}%` }}
-                      ></div>
+                      />
                     </div>
-                    <p className="text-sm text-gray-600">Uploading image... {Math.round(uploadProgress)}%</p>
+                    <p className="text-sm text-muted-foreground">
+                      Uploading image… {Math.round(uploadProgress)}%
+                    </p>
                   </>
                 ) : (
-                  <p className="text-sm text-gray-600">Saving transaction...</p>
+                  <p className="text-sm text-muted-foreground">Saving transaction…</p>
                 )}
               </div>
             </div>

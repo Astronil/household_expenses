@@ -15,7 +15,9 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"
 export function SpendingChart({ transactions }: SpendingChartProps) {
   const chartData = useMemo(() => {
     const currentMonth = new Date().toISOString().slice(0, 7)
-    const monthlyTransactions = transactions.filter((t) => t.month === currentMonth)
+    const monthlyTransactions = transactions.filter(
+      (t) => (t.month ?? t.timestamp.slice(0, 7)) === currentMonth
+    )
 
     const userTotals = monthlyTransactions.reduce(
       (acc, transaction) => {

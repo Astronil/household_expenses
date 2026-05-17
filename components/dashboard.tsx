@@ -9,13 +9,15 @@ import { Header } from "@/components/header"
 import { StatsCards } from "@/components/stats-cards"
 import { SpendingChart } from "@/components/spending-chart"
 import { TransactionFeed } from "@/components/transaction-feed"
-import { AddTransactionModal } from "@/components/add-transaction-modal"
 import { StandingsModal } from "@/components/standings-modal"
 import { AdminPanel } from "@/components/admin-panel"
+import { useAddTransaction } from "@/components/add-transaction-context"
+import { CategorySubcategoryFields } from "@/components/category-subcategory-fields"
+import { useExpenseCategories } from "@/lib/hooks/use-expense-categories"
+import { getTransactionHistoryStartIso } from "@/lib/transaction-history"
 import { Button } from "@/components/ui/button"
-import { Plus, Calculator, Settings, Users, LogOut, Trash2, Key, Copy, Upload } from "lucide-react"
+import { Plus, Calculator, Settings, Users, LogOut, Trash2, Key, Copy } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useTransactions } from "@/lib/hooks/use-transactions"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,9 +38,10 @@ import {
 
 export function Dashboard() {
   const { user } = useAuth()
+  const { openAddTransaction } = useAddTransaction()
+  const { categories, subcategoriesByCategory } = useExpenseCategories(user?.householdId)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
-  const [showAddTransaction, setShowAddTransaction] = useState(false)
   const [showStandings, setShowStandings] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,16 +57,20 @@ export function Dashboard() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editAmount, setEditAmount] = useState<string>("");
   const [editNote, setEditNote] = useState<string>("");
+  const [editCategoryId, setEditCategoryId] = useState<string>("");
+  const [editSubcategoryId, setEditSubcategoryId] = useState<string>("");
 
   const createSystemTransaction = async (message: string) => {
     if (!user?.householdId) return
 
     try {
+      const ts = new Date().toISOString()
       await addDoc(collection(db, "transactions"), {
         householdId: user.householdId,
         amount: 0,
         note: message,
-        timestamp: new Date().toISOString(),
+        timestamp: ts,
+        month: ts.slice(0, 7),
         type: "system",
         userName: "System"
       })
@@ -76,7 +83,8 @@ export function Dashboard() {
     setEditingTransaction(transaction);
     setEditAmount(transaction.amount.toFixed(2));
     setEditNote(transaction.note || "");
-    // You might want to open a modal here for editing
+    setEditCategoryId(transaction.categoryId || "");
+    setEditSubcategoryId(transaction.subcategoryId || "");
   };
 
   const handleDeleteTransaction = async (transactionId: string) => {
@@ -101,10 +109,33 @@ export function Dashboard() {
     if (!editingTransaction) return;
 
     try {
-      await updateDoc(doc(db, "transactions", editingTransaction.id), {
+      const cat = editCategoryId ? categories.find((c) => c.id === editCategoryId) : undefined;
+      const subs = editCategoryId ? subcategoriesByCategory.get(editCategoryId) ?? [] : [];
+      const sub = editSubcategoryId ? subs.find((s) => s.id === editSubcategoryId) : undefined;
+
+      const patch: Record<string, unknown> = {
         amount: Number.parseFloat(editAmount),
         note: editNote.trim() || null,
-      });
+      };
+
+      if (editCategoryId && cat) {
+        patch.categoryId = editCategoryId;
+        patch.categoryName = cat.name;
+        if (editSubcategoryId && sub) {
+          patch.subcategoryId = editSubcategoryId;
+          patch.subcategoryName = sub.name;
+        } else {
+          patch.subcategoryId = null;
+          patch.subcategoryName = null;
+        }
+      } else {
+        patch.categoryId = null;
+        patch.categoryName = null;
+        patch.subcategoryId = null;
+        patch.subcategoryName = null;
+      }
+
+      await updateDoc(doc(db, "transactions", editingTransaction.id), patch);
       toast({
         title: "Transaction updated",
         description: "Changes have been saved.",
@@ -138,6 +169,17 @@ export function Dashboard() {
       // Delete all transactions
       const deletePromises = transactionsSnapshot.docs.map(doc => deleteDoc(doc.ref))
       await Promise.all(deletePromises)
+
+      const categoriesSnap = await getDocs(
+        query(collection(db, "categories"), where("householdId", "==", user.householdId))
+      )
+      const subcategoriesSnap = await getDocs(
+        query(collection(db, "subcategories"), where("householdId", "==", user.householdId))
+      )
+      await Promise.all([
+        ...categoriesSnap.docs.map((d) => deleteDoc(d.ref)),
+        ...subcategoriesSnap.docs.map((d) => deleteDoc(d.ref)),
+      ])
 
       // Get all users in the household
       const usersQuery = query(
@@ -206,6 +248,17 @@ export function Dashboard() {
           const transactionsSnapshot = await getDocs(transactionsQuery)
           const deletePromises = transactionsSnapshot.docs.map(doc => deleteDoc(doc.ref))
           await Promise.all(deletePromises)
+
+          const categoriesSnap = await getDocs(
+            query(collection(db, "categories"), where("householdId", "==", user.householdId))
+          )
+          const subcategoriesSnap = await getDocs(
+            query(collection(db, "subcategories"), where("householdId", "==", user.householdId))
+          )
+          await Promise.all([
+            ...categoriesSnap.docs.map((d) => deleteDoc(d.ref)),
+            ...subcategoriesSnap.docs.map((d) => deleteDoc(d.ref)),
+          ])
 
           // Delete the household
           await deleteDoc(householdRef)
@@ -315,6 +368,7 @@ export function Dashboard() {
     const q = query(
       collection(db, "transactions"),
       where("householdId", "==", householdId),
+      where("timestamp", ">=", getTransactionHistoryStartIso()),
       orderBy("timestamp", "desc")
     )
     const unsubscribe = onSnapshot(
@@ -345,13 +399,13 @@ export function Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-dvh">
         <Header />
         <main className="container mx-auto px-4 py-6">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <h2 className="text-red-800 font-semibold">Error Loading Dashboard</h2>
-            <p className="text-red-600 mt-2">{error}</p>
-            <p className="text-red-600 mt-2">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
+            <h2 className="font-semibold text-destructive">Error Loading Dashboard</h2>
+            <p className="mt-2 text-sm opacity-90">{error}</p>
+            <p className="mt-2 text-sm opacity-90">
               If you see an error about missing indexes, please wait a few minutes for the index to be created.
             </p>
           </div>
@@ -361,7 +415,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-dvh">
       <Header>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full">
           <h1 className="text-xl sm:text-2xl font-bold truncate flex-1">{householdName}</h1>
@@ -442,7 +496,7 @@ export function Dashboard() {
       <main className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-4">
           <div className="space-y-2">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{householdName}</h1>
+            <h2 className="text-xl font-bold sm:text-2xl md:text-3xl">{householdName}</h2>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -495,7 +549,7 @@ export function Dashboard() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full">
-            <Button onClick={() => setShowAddTransaction(true)} className="w-full sm:w-auto">
+            <Button onClick={openAddTransaction} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Add Expense
             </Button>
@@ -515,6 +569,10 @@ export function Dashboard() {
           loading={loading}
           onEdit={handleEditTransaction}
           onDelete={handleDeleteTransaction}
+          maxItems={5}
+          title="Recent transactions"
+          viewAllHref="/transactions"
+          viewAllLabel="View all"
         />
       </main>
 
@@ -524,7 +582,7 @@ export function Dashboard() {
             <AlertDialogHeader>
               <AlertDialogTitle>Edit Transaction</AlertDialogTitle>
               <AlertDialogDescription>
-                Edit the amount and note for this transaction.
+                Edit amount, note, and category for this transaction.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="space-y-4">
@@ -549,6 +607,17 @@ export function Dashboard() {
                   className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 />
               </div>
+              <CategorySubcategoryFields
+                categories={categories}
+                subcategoriesForCategory={
+                  editCategoryId ? subcategoriesByCategory.get(editCategoryId) ?? [] : []
+                }
+                categoryId={editCategoryId}
+                subcategoryId={editSubcategoryId}
+                onCategoryChange={setEditCategoryId}
+                onSubcategoryChange={setEditSubcategoryId}
+                idPrefix="edit-tx"
+              />
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={handleCancelEdit}>Cancel</AlertDialogCancel>
@@ -557,8 +626,6 @@ export function Dashboard() {
           </AlertDialogContent>
         </AlertDialog>
       )}
-
-      <AddTransactionModal open={showAddTransaction} onOpenChange={setShowAddTransaction} />
 
       <StandingsModal open={showStandings} onOpenChange={setShowStandings} transactions={transactions} />
 
@@ -615,9 +682,9 @@ export function Dashboard() {
               Share this code with others to let them join your household
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg my-4">
+          <div className="my-4 flex items-center justify-between rounded-xl border border-border/50 bg-muted/40 p-4 backdrop-blur-sm">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-500">Your Household Code</p>
+              <p className="text-sm font-medium text-muted-foreground">Your Household Code</p>
               <p className="text-2xl font-bold">{householdCode}</p>
             </div>
             <Button variant="outline" size="sm" onClick={copyToClipboard}>

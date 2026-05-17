@@ -1,20 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDocs, getDoc, addDoc } from "firebase/firestore"
+import Link from "next/link"
+import { collection, query, where, doc, updateDoc, getDocs, getDoc, addDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/components/auth-provider"
-import type { Transaction } from "@/types"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Edit, Trash2, Copy, Users, UserX, UserCheck, UserMinus, UserPlus } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Copy, UserPlus } from "lucide-react"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,10 +41,6 @@ interface Member {
 
 export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
   const { user } = useAuth()
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
-  const [editAmount, setEditAmount] = useState("")
-  const [editNote, setEditNote] = useState("")
   const [loading, setLoading] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [householdCode, setHouseholdCode] = useState("")
@@ -109,84 +102,19 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
 
     fetchHouseholdCode()
     fetchMembers()
-
-    // Get transactions
-    const q = query(
-      collection(db, "transactions"),
-      where("householdId", "==", user.householdId),
-      orderBy("timestamp", "desc"),
-    )
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const transactionData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Transaction[]
-
-      setTransactions(transactionData)
-    })
-
-    return unsubscribe
   }, [user?.householdId, open])
-
-  const handleEdit = (transaction: Transaction) => {
-    setEditingTransaction(transaction)
-    setEditAmount(transaction.amount.toString())
-    setEditNote(transaction.note || "")
-  }
-
-  const handleSaveEdit = async () => {
-    if (!editingTransaction) return
-
-    try {
-      await updateDoc(doc(db, "transactions", editingTransaction.id), {
-        amount: Number.parseFloat(editAmount),
-        note: editNote.trim() || undefined,
-      })
-
-      toast({
-        title: "Transaction updated",
-        description: "Changes have been saved",
-      })
-
-      setEditingTransaction(null)
-    } catch (error: any) {
-      toast({
-        title: "Error updating transaction",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleDelete = async (transactionId: string) => {
-    if (!confirm("Are you sure you want to delete this transaction?")) return
-
-    try {
-      await deleteDoc(doc(db, "transactions", transactionId))
-
-      toast({
-        title: "Transaction deleted",
-        description: "The transaction has been removed",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Error deleting transaction",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
-  }
 
   const createSystemTransaction = async (message: string) => {
     if (!user?.householdId) return
 
     try {
+      const ts = new Date().toISOString()
       await addDoc(collection(db, "transactions"), {
         householdId: user.householdId,
         amount: 0,
         note: message,
-        timestamp: new Date().toISOString(),
+        timestamp: ts,
+        month: ts.slice(0, 7),
         type: "system",
         userName: "System"
       })
@@ -487,10 +415,15 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
                 Manage your household members and settings
               </p>
             </div>
-            <Button onClick={() => setShowInviteDialog(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Invite Member
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/admin/categories">Expense categories</Link>
+              </Button>
+              <Button onClick={() => setShowInviteDialog(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Invite Member
+              </Button>
+            </div>
           </div>
 
           <Card>

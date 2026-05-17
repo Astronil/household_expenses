@@ -22,24 +22,27 @@ export function TransactionList({ transactions }: TransactionListProps) {
   return (
     <div className="space-y-4">
       {transactions.map((transaction) => (
-        <div key={transaction.id} className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
+        <div
+          key={transaction.id}
+          className="flex items-center justify-between rounded-xl border border-border/50 bg-card/80 p-4 shadow-sm backdrop-blur-sm transition-shadow duration-200 hover:shadow-md supports-[backdrop-filter]:bg-card/65"
+        >
           <div className="flex items-center space-x-4">
             <div>
               <p className="font-medium">${transaction.amount.toFixed(2)}</p>
-              <p className="text-sm text-gray-500">{transaction.note || "No note"}</p>
+              <p className="text-sm text-muted-foreground">{transaction.note || "No note"}</p>
             </div>
             {transaction.receiptUrl && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedReceipt(transaction.receiptUrl)}
-                className="text-blue-600 hover:text-blue-700"
+                className="text-primary hover:text-primary/90"
               >
                 View Receipt
               </Button>
             )}
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {new Date(transaction.timestamp).toLocaleDateString()}
           </p>
         </div>

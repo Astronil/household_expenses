@@ -152,7 +152,7 @@ export function HouseholdSetup() {
   }
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+    <div className="container mx-auto flex min-h-dvh items-center px-3 py-8 sm:px-4 sm:py-10">
       <Card className="max-w-md mx-auto">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl">Household Setup</CardTitle>
@@ -177,7 +177,7 @@ export function HouseholdSetup() {
                   className="w-full"
                 />
               </div>
-              <p className="text-xs sm:text-sm text-gray-500">
+              <p className="text-xs text-muted-foreground sm:text-sm">
                 Create a new household to start tracking expenses with your family or roommates.
               </p>
               <Button
@@ -188,10 +188,10 @@ export function HouseholdSetup() {
                 {loading ? "Creating..." : "Create New Household"}
               </Button>
               {createdCode && (
-                <div className="mt-4 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-xs sm:text-sm font-medium text-green-800">Household Code:</p>
-                  <p className="text-xl sm:text-2xl font-bold text-green-900 mt-1">{createdCode}</p>
-                  <p className="text-xs sm:text-sm text-green-600 mt-2">
+                <div className="mt-4 rounded-xl border border-emerald-500/35 bg-emerald-500/10 p-3 sm:p-4">
+                  <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200 sm:text-sm">Household Code:</p>
+                  <p className="mt-1 text-xl font-bold text-emerald-950 dark:text-emerald-50 sm:text-2xl">{createdCode}</p>
+                  <p className="mt-2 text-xs text-emerald-800/90 dark:text-emerald-200/90 sm:text-sm">
                     Share this code with others to let them join your household.
                   </p>
                 </div>

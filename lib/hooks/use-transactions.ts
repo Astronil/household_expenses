@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/components/auth-provider";
+import { getTransactionHistoryStartIso } from "@/lib/transaction-history";
 import type { Transaction } from "@/types";
 
 export function useTransactions() {
@@ -27,6 +28,7 @@ export function useTransactions() {
     const q = query(
       collection(db, "transactions"),
       where("householdId", "==", user.householdId),
+      where("timestamp", ">=", getTransactionHistoryStartIso()),
       orderBy("timestamp", "desc")
     );
 
